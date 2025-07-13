@@ -14,25 +14,43 @@ public final class Piece {
     public static final int WHITE = 8;
     public static final int BLACK = 16;
 
-    public static String pieceToIcon(int piece) {
+    public static String pieceToSymbol(int piece) {
         int type = piece & 0b111;
         switch (type) {
             case 0:
                 return " ";
             case 1:
-                return "K";
+                return "k";
             case 2:
-                return "P";
+                return "p";
             case 3:
-                return "N";
+                return "n";
             case 4:
-                return "B";
+                return "b";
             case 5:
-                return "R";
+                return "r";
             case 6:
-                return "Q";
+                return "q";
         }
         return " ";
+    }
+
+    public static int symbolToPiece(char symbol) {
+        switch (symbol) {
+            case 'k':
+                return 1;
+            case 'p':
+                return 2;
+            case 'n':
+                return 3;
+            case 'b':
+                return 4;
+            case 'r':
+                return 5;
+            case 'q':
+                return 6;
+        }
+        return 0;
     }
 
     public static boolean isWhite(int piece) {
