@@ -141,6 +141,60 @@ public class MoveGenerator {
                 }
             }
         }
+
+        // Roque
+        if (!game.isInCheck(Piece.getColor(piece))) {
+            generateCastlingMoves(startSquare, piece, game, moves);
+        }
+    }
+
+    private void generateCastlingMoves(int startSquare, int piece, Game game, List<Move> moves) {
+        int color = Piece.getColor(piece);
+        int backRank = color == Piece.WHITE ? 0 : 7;
+
+        // Kingside
+        if (canCastle(game, color, true)) {
+            moves.add(new Move(startSquare, backRank * 8 + 6));
+        }
+
+        // Queenside
+        if (canCastle(game, color, false)) {
+            moves.add(new Move(startSquare, backRank * 8 + 2));
+        }
+    }
+
+    private boolean canCastle(Game game, int color, boolean kingside) {
+        int king = Piece.KING | color;
+        int rook = Piece.ROOK | color;
+        int backRank = color == Piece.WHITE ? 0 : 7;
+        int kingSquare = backRank * 8 + 4;
+        int rookSquare = kingside ? backRank * 8 + 7 : backRank * 8;
+
+        // Vérification des pièces
+        if (game.board.squares[kingSquare] != king ||
+                game.board.squares[rookSquare] != rook) {
+            return false;
+        }
+
+        // Vérification des cases vides
+        int start = kingside ? 5 : 1;
+        int end = kingside ? 6 : 3;
+        for (int file = start; file <= end; file++) {
+            if (game.board.squares[backRank * 8 + file] != Piece.NONE) {
+                return false;
+            }
+        }
+
+        // Vérification des attaques - utiliser la nouvelle méthode directe
+        int opponentColor = Piece.getOpponentColor(color);
+        for (int file = 4; file <= (kingside ? 6 : 2); file++) {
+            int square = backRank * 8 + file;
+            if (game.isSquareAttacked(square, opponentColor)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void generateSlidingMoves(int startSquare, int piece, Game game, List<Move> moves) {
@@ -163,5 +217,67 @@ public class MoveGenerator {
                 }
             }
         }
+    }
+
+    public boolean isSquareAttackedDirectly(Board board, int square, int attackerColor) {
+        int[] directions = { 8, -8, -1, 1, 7, -7, 9, -9 }; // Toutes les directions
+
+        for (int direction : directions) {
+            for (int i = 1; i < 8; i++) {
+                int targetSquare = square + direction * i;
+                if (targetSquare < 0 || targetSquare >= 64)
+                    break;
+
+                int piece = board.squares[targetSquare];
+                if (piece == Piece.NONE)
+                    continue;
+
+                if (Piece.getColor(piece) == attackerColor) {
+                    int type = Piece.getType(piece);
+
+                    // Vérification des pièces attaquantes
+                    if (i == 1 && type == Piece.KING)
+                        return true;
+                    if (type == Piece.QUEEN)
+                        return true;
+                    if (type == Piece.ROOK && direction < 4)
+                        return true; // Directions orthogonales
+                    if (type == Piece.BISHOP && direction >= 4)
+                        return true; // Directions diagonales
+                }
+                break; // Une pièce bloque le chemin
+            }
+        }
+
+        // Vérifier les attaques de pions
+        int pawnDirection = attackerColor == Piece.WHITE ? 1 : -1;
+        int[] pawnAttacks = { 7 * pawnDirection, 9 * pawnDirection };
+        for (int attack : pawnAttacks) {
+            int pawnSquare = square - attack;
+            if (pawnSquare < 0 || pawnSquare >= 64)
+                continue;
+
+            int piece = board.squares[pawnSquare];
+            if (Piece.getType(piece) == Piece.PAWN &&
+                    Piece.getColor(piece) == attackerColor) {
+                return true;
+            }
+        }
+
+        // Vérifier les attaques de cavaliers
+        int[] knightMoves = { 15, 17, -15, -17, 10, 6, -10, -6 };
+        for (int move : knightMoves) {
+            int knightSquare = square + move;
+            if (knightSquare < 0 || knightSquare >= 64)
+                continue;
+
+            int piece = board.squares[knightSquare];
+            if (Piece.getType(piece) == Piece.KNIGHT &&
+                    Piece.getColor(piece) == attackerColor) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

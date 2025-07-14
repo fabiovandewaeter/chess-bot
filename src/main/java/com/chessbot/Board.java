@@ -1,5 +1,7 @@
 package com.chessbot;
 
+import java.util.Arrays;
+
 public class Board {
     private static final String RESET = "\u001B[0m";
     private static final String BG_LIGHT = bg(240, 217, 181);
@@ -14,6 +16,7 @@ public class Board {
     public Board(boolean useUnicode) {
         this.useUnicode = useUnicode;
         squares = new int[64];
+        Arrays.fill(squares, Piece.NONE); // Initialiser toutes les cases
         loadPositionFromFEN(startFEN);
     }
 

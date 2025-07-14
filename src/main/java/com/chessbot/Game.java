@@ -6,11 +6,13 @@ import java.util.ArrayList;
 public class Game {
     public Board board;
     public int colorToMove;
+    private boolean botPlaysWhite;
     private MoveGenerator moveGenerator;
 
-    public Game(boolean useUnicode) {
+    public Game(boolean useUnicode, boolean botPlaysWhite) {
         board = new Board(useUnicode);
         colorToMove = Piece.WHITE;
+        this.botPlaysWhite = botPlaysWhite;
         moveGenerator = new MoveGenerator();
     }
 
@@ -22,7 +24,8 @@ public class Game {
 
         if (isLegalMove(move)) {
             executeMove(move);
-            colorToMove = (colorToMove == Piece.WHITE) ? Piece.BLACK : Piece.WHITE;
+            // colorToMove = (colorToMove == Piece.WHITE) ? Piece.BLACK : Piece.WHITE;
+            colorToMove = Piece.getOpponentColor(colorToMove); // Correction
             return true;
         }
 
@@ -87,21 +90,24 @@ public class Game {
         return !wouldLeaveKingInCheck(move);
     }
 
-    private boolean wouldLeaveKingInCheck(Move move) {
-        // Sauvegarder l'état actuel
+    public boolean wouldLeaveKingInCheck(Move move) {
+        // Sauvegarde de l'état
         int originalPiece = board.squares[move.startingSquare];
         int capturedPiece = board.squares[move.target];
+        int originalColor = colorToMove;
 
-        // Exécuter temporairement le coup
+        // Exécute temporairement le coup
         board.squares[move.target] = originalPiece;
         board.squares[move.startingSquare] = Piece.NONE;
+        colorToMove = Piece.getOpponentColor(originalColor); // Tour suivant
 
-        // Vérifier si le roi est en échec
-        boolean kingInCheck = isInCheck(colorToMove);
+        // Vérifie si le roi (du joueur ayant joué le coup) est en échec
+        boolean kingInCheck = isInCheck(originalColor); // Utiliser originalColor
 
-        // Restaurer l'état original
+        // Restauration
         board.squares[move.startingSquare] = originalPiece;
         board.squares[move.target] = capturedPiece;
+        colorToMove = originalColor;
 
         return kingInCheck;
     }
@@ -127,22 +133,62 @@ public class Game {
             return false;
 
         // Vérifier si le roi est attaqué
-        int opponentColor = (color == Piece.WHITE) ? Piece.BLACK : Piece.WHITE;
-        return isSquareAttacked(kingSquare, opponentColor);
+        return isSquareAttacked(kingSquare, Piece.getOpponentColor(color));
     }
 
-    private boolean isSquareAttacked(int square, int attackerColor) {
-        // Temporairement changer le joueur pour générer les coups de l'adversaire
-        int originalColor = colorToMove;
-        colorToMove = attackerColor;
+    public boolean isSquareAttacked(int square, int attackerColor) {
+        // Vérifier les attaques par les pions
+        int pawnDirection = attackerColor == Piece.WHITE ? -1 : 1;
+        int[] pawnAttacks = { 7, 9 };
+        for (int attack : pawnAttacks) {
+            int pawnSquare = square + pawnDirection * attack;
+            if (pawnSquare >= 0 && pawnSquare < 64) {
+                int piece = board.squares[pawnSquare];
+                if (Piece.getType(piece) == Piece.PAWN && Piece.getColor(piece) == attackerColor) {
+                    return true;
+                }
+            }
+        }
 
-        List<Move> opponentMoves = moveGenerator.generateMoves(this);
+        // Vérifier les attaques par les cavaliers
+        int[] knightMoves = { 15, 17, -15, -17, 10, 6, -10, -6 };
+        for (int move : knightMoves) {
+            int knightSquare = square + move;
+            if (knightSquare >= 0 && knightSquare < 64) {
+                int piece = board.squares[knightSquare];
+                if (Piece.getType(piece) == Piece.KNIGHT && Piece.getColor(piece) == attackerColor) {
+                    return true;
+                }
+            }
+        }
 
-        colorToMove = originalColor;
+        // Vérifier les attaques en ligne droite
+        int[] directions = { 8, -8, -1, 1, 7, -7, 9, -9 };
+        for (int direction : directions) {
+            for (int i = 1; i < 8; i++) {
+                int targetSquare = square + direction * i;
+                if (targetSquare < 0 || targetSquare >= 64)
+                    break;
 
-        for (Move move : opponentMoves) {
-            if (move.target == square) {
-                return true;
+                int piece = board.squares[targetSquare];
+                if (piece == Piece.NONE)
+                    continue;
+
+                if (Piece.getColor(piece) == attackerColor) {
+                    int type = Piece.getType(piece);
+
+                    // Vérifier les pièces attaquantes
+                    if (i == 1 && type == Piece.KING)
+                        return true;
+                    if (type == Piece.QUEEN)
+                        return true;
+                    if (type == Piece.ROOK && (direction == 8 || direction == -8 || direction == -1 || direction == 1))
+                        return true;
+                    if (type == Piece.BISHOP
+                            && (direction == 7 || direction == -7 || direction == 9 || direction == -9))
+                        return true;
+                }
+                break; // Une pièce bloque le chemin
             }
         }
 
@@ -151,26 +197,12 @@ public class Game {
 
     public boolean isGameOver() {
         List<Move> pseudoLegalMoves = moveGenerator.generateMoves(this);
-
-        // Filtrer pour ne garder que les coups légaux (qui ne laissent pas le roi en
-        // échec)
         List<Move> legalMoves = new ArrayList<>();
         for (Move move : pseudoLegalMoves) {
             if (!wouldLeaveKingInCheck(move)) {
                 legalMoves.add(move);
             }
         }
-
-        if (legalMoves.isEmpty()) {
-            if (isInCheck(colorToMove)) {
-                String player = (colorToMove == Piece.WHITE) ? "Noirs" : "Blancs";
-                System.out.println("ÉCHEC ET MAT ! Les " + player + " gagnent !");
-            } else {
-                System.out.println("PAT ! Match nul !");
-            }
-            return true;
-        }
-
-        return false;
+        return legalMoves.isEmpty(); // Retirer tout System.out.println
     }
 }

@@ -8,7 +8,7 @@ public class Main {
 
         boolean useUnicode = false;
 
-        Game game = new Game(useUnicode);
+        Game game = new Game(useUnicode, true);
 
         System.out.println("\nFormat des coups : e2e4, a7a5, etc.");
         System.out.println("Tapez 'quit' pour quitter\n");
