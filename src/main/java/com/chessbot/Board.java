@@ -8,59 +8,56 @@ public class Board {
     private static final String FG_BLACK = fg(0, 0, 0);
     private static final String startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-    // reversed because of loadPositionFromFEN() ?
     public int[] squares;
+    private boolean useUnicode;
 
-    public Board() {
+    public Board(boolean useUnicode) {
+        this.useUnicode = useUnicode;
         squares = new int[64];
-
         loadPositionFromFEN(startFEN);
     }
 
-    // Helper : génère le code ANSI true-color pour le foreground
     private static String fg(int r, int g, int b) {
         return "\u001B[38;2;" + r + ";" + g + ";" + b + "m";
     }
 
-    // Helper : génère le code ANSI true-color pour le background
     private static String bg(int r, int g, int b) {
         return "\u001B[48;2;" + r + ";" + g + ";" + b + "m";
     }
 
     public void print() {
         System.out.println();
-        // for (int row = 0; row < 8; row++) {
         for (int row = 7; row >= 0; row--) {
             System.out.print(" " + (1 + row) + " ");
             for (int col = 0; col < 8; col++) {
                 boolean light = (row + col) % 2 == 0;
                 String bgColor = light ? BG_LIGHT : BG_DARK;
                 int piece = squares[row * 8 + col];
-                String pieceSymbol = Piece.pieceToSymbol(piece);
-                String fgColor = null;
-                if (Piece.isWhite(piece)) {
-                    fgColor = FG_WHITE;
-                    pieceSymbol = pieceSymbol.toUpperCase();
-                } else {
-                    fgColor = FG_BLACK;
+                String pieceSymbol = useUnicode ? Piece.pieceToUnicodeSymbol(piece) : Piece.pieceToLetterSymbol(piece);
+                String fgColor = FG_BLACK;
+
+                if (piece != Piece.NONE) {
+                    if (Piece.isWhite(piece)) {
+                        fgColor = FG_WHITE;
+                        if (!useUnicode) {
+                            pieceSymbol = pieceSymbol.toUpperCase();
+                        }
+                    }
                 }
+
                 System.out.print(bgColor + fgColor + " " + pieceSymbol + RESET);
             }
             System.out.println();
         }
-        // fichiers en bas
-        System.out.print("  ");
+        System.out.print("   ");
         for (char f = 'a'; f <= 'h'; f++) {
             System.out.print(" " + f);
         }
-        System.out.println("\n");
+        System.out.println();
     }
 
-    // add in reverse order
     public void loadPositionFromFEN(String fen) {
         String fenBoard = fen.split(" ")[0];
-        System.out.println(fenBoard);
-
         int file = 0, rank = 7;
 
         for (int i = 0; i < fenBoard.length(); i++) {
@@ -70,18 +67,14 @@ public class Board {
                 rank--;
             } else {
                 if (Character.isDigit(symbol)) {
-                    file += (int) Character.getNumericValue(symbol);
+                    file += Character.getNumericValue(symbol);
                 } else {
-                    int pieceColour = (Character.isUpperCase(symbol)) ? Piece.WHITE : Piece.BLACK;
+                    int pieceColor = Character.isUpperCase(symbol) ? Piece.WHITE : Piece.BLACK;
                     int pieceType = Piece.symbolToPiece(Character.toLowerCase(symbol));
-                    squares[rank * 8 + file] = pieceType | pieceColour;
+                    squares[rank * 8 + file] = pieceType | pieceColor;
                     file++;
                 }
             }
-        }
-
-        for (int i : squares) {
-            System.out.print(i + " ");
         }
     }
 }
